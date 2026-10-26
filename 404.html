@@ -118,7 +118,8 @@ function mvTekst(p) {
       !m.ts.some(t => norm(t) === norm(DATA.scope)))
     advar = ` · <span class="adv">⚠️ bærer ikke #${esc(norm(DATA.scope))}</span>`;
   const ts = m.ts?.length
-    ? `<details class="ts"><summary>bærer ${m.ts.length} scope${m.ts.length === 1 ? "" : "s"}</summary><div>${m.ts.map(esc).join(", ")}</div></details>` : "";
+    ? `<details class="ts"><summary>bærer ${m.ts.length} scope${m.ts.length === 1 ? "" : "s"}</summary><div>${m.ts.map(esc).join(", ")}</div></details>`
+    : (p.type === "hop" ? `<div class="mv">ingen scopede pakker set båret</div>` : "");
   return `<div class="mv">${dele.join(" · ")}${advar}</div>${ts}`;
 }
 
