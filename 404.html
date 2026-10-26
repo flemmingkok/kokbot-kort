@@ -246,7 +246,7 @@ function visListe(punkter) {
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
     const under = [p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s)].filter(Boolean).join(" · ");
     const alt = p.alt?.length
-      ? `<div class="alt">? Usikkert hop – ${p.alt.length} andre mulige: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
+      ? `<div class="alt">? Usikkert hop – ${p.alt.length === 1 ? "1 anden mulig" : p.alt.length + " andre mulige"}: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
     const b = indTil[i];
     const st = b !== undefined ? stykker[b] : null;
     const kmTekst = st ? `${Math.round(st.km)} km${st.mangler ? " *" : ""}` : "";
