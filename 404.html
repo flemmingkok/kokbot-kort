@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KOKbot – sti</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍🍳</text></svg>">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root { --bg:#f6f5f2; --kort:#ffffff; --tekst:#1c1c1c; --svag:#6b6b6b; --linje:#e2dfd8;
+          --afs:#2563eb; --hop:#d97706; --mod:#15803d; --ukendt:#9ca3af; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111214; --kort:#1b1d21; --tekst:#ececec; --svag:#9a9a9a; --linje:#2c2f35;
+            --afs:#60a5fa; --hop:#fbbf24; --mod:#4ade80; --ukendt:#6b7280; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--tekst);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); display:flex; flex-direction:column; }
+  header { padding: 14px 16px 10px; }
+  h1 { font-size: 17px; margin:0 0 2px; font-weight:650; word-break: break-word; }
+  .meta { color:var(--svag); font-size:13px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { background:var(--kort); border:1px solid var(--linje); border-radius:999px; padding:2px 10px; font-size:13px; }
+  #kort { flex: 1 1 55vh; min-height: 300px; border-top:1px solid var(--linje); border-bottom:1px solid var(--linje); }
+  section { padding: 12px 16px 20px; }
+  ol { list-style:none; margin:0; padding:0; }
+  li { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--linje); }
+  li:last-child { border-bottom:0; }
+  .prik { width:22px; height:22px; border-radius:50%; flex:none; display:grid; place-items:center;
+          color:#fff; font-size:11px; font-weight:700; }
+  .navn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hex { font-family: ui-monospace, Menlo, monospace; color:var(--svag); font-size:12px; }
+  .km { color:var(--svag); font-size:13px; white-space:nowrap; }
+  .fejl { padding:40px 16px; text-align:center; color:var(--svag); }
+  footer { color:var(--svag); font-size:12px; padding: 0 16px 16px; }
+  .leaflet-container { background:var(--bg); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="titel">Henter sti…</h1>
+  <div class="meta" id="meta"></div>
+  <div class="chips" id="chips"></div>
+</header>
+<div id="kort"></div>
+<section><ol id="liste"></ol></section>
+<footer>KOKbot · DK_8700_KOK, Horsens · Positioner fra offentlige adverts. Hop-præfikser kan i sjældne tilfælde pege på en forkert repeater.</footer>
+
+<script>
+const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
+const farve = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function hentId() {
+  const h = location.hash.replace(/^#/, "");
+  if (/^[A-Za-z0-9]{1,12}$/.test(h)) return h;
+  const sidste = location.pathname.split("/").filter(Boolean).pop() || "";
+  return /^[A-Za-z0-9]{1,12}$/.test(sidste) ? sidste : null;
+}
+
+function km(a, b) {
+  const r = Math.PI / 180, [la1, lo1] = a, [la2, lo2] = b;
+  const h = Math.sin((la2 - la1) * r / 2) ** 2 +
+            Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+function fejl(tekst) {
+  document.getElementById("titel").textContent = "Ingen sti";
+  document.getElementById("kort").outerHTML = `<div class="fejl">${tekst}</div>`;
+}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function start() {
+  const id = hentId();
+  if (!id) return fejl("Linket mangler et sti-ID.");
+  let d;
+  for (let forsøg = 0; forsøg < 6; forsøg++) {           // nye stier kan være op til ~1 min om at dukke op
+    try {
+      const svar = await fetch(DATA_URL(id), { cache: "no-store" });
+      if (svar.ok) { d = await svar.json(); break; }
+    } catch (e) {}
+    document.getElementById("titel").textContent = "Venter på stien…";
+    await new Promise(r => setTimeout(r, 10000));
+  }
+  if (!d) return fejl("Stien findes ikke (endnu). Prøv igen om lidt.");
+  tegn(d);
+}
+
+function tegn(d) {
+  document.title = `KOKbot – ${d.afs?.n || "sti"}`;
+  document.getElementById("titel").textContent = d.afs?.n || "Ukendt afsender";
+  const tid = d.t ? new Date(d.t * 1000).toLocaleString("da-DK", { dateStyle: "medium", timeStyle: "short" }) : "";
+  document.getElementById("meta").textContent = `${tid}${d.kanal ? " · " + d.kanal : ""}`;
+
+  const chips = [];
+  chips.push(d.hop.length === 0 ? "Direkte" : `${d.hop.length} hop`);
+  if (d.bph) chips.push(`${d.bph}-byte`);
+  chips.push(d.scope ? `scope ${d.scope}` : "uden scope");
+  if (d.snr != null) chips.push(`${Math.round(d.snr)} dB / ${d.rssi} dBm`);
+  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+
+  // Punkter i rækkefølge: afsender → hop … → modtager
+  const punkter = [
+    { type: "afs", n: d.afs?.n, ll: d.afs?.ll },
+    ...d.hop.map((h, i) => ({ type: "hop", nr: i + 1, n: h.n, p: h.p, ll: h.ll })),
+    { type: "mod", n: d.mod?.n, ll: d.mod?.ll },
+  ];
+
+  const kort = L.map("kort", { zoomControl: true, attributionControl: true });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 18, attribution: "© OpenStreetMap"
+  }).addTo(kort);
+
+  const kendte = punkter.filter(p => Array.isArray(p.ll));
+  const farver = { afs: farve("--afs"), hop: farve("--hop"), mod: farve("--mod") };
+
+  // Linje mellem kendte punkter; stiplet hvor et hop mangler position
+  for (let i = 0; i < punkter.length - 1; i++) {
+    const a = punkter[i];
+    if (!a.ll) continue;
+    let j = i + 1, mangler = false;
+    while (j < punkter.length && !punkter[j].ll) { mangler = true; j++; }
+    if (j >= punkter.length) break;
+    L.polyline([a.ll, punkter[j].ll], {
+      color: mangler ? farve("--ukendt") : farve("--hop"), weight: 3, opacity: .9,
+      dashArray: mangler ? "6 8" : null
+    }).addTo(kort);
+  }
+
+  for (const p of kendte) {
+    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
+    const ikon = L.divIcon({
+      className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+      html: `<div class="prik" style="background:${farver[p.type]};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>`
+    });
+    L.marker(p.ll, { icon: ikon }).addTo(kort)
+      .bindPopup(`<b>${esc(p.n || "Ukendt")}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}`);
+  }
+
+  if (kendte.length >= 2) kort.fitBounds(L.latLngBounds(kendte.map(p => p.ll)).pad(0.2));
+  else if (kendte.length === 1) kort.setView(kendte[0].ll, 12);
+  else kort.setView([56.0, 10.0], 7);
+
+  // Liste med afstand pr. ben
+  let forrige = null;
+  document.getElementById("liste").innerHTML = punkter.map(p => {
+    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
+    const bg = p.ll ? farver[p.type] : farve("--ukendt");
+    let ben = "";
+    if (p.ll && forrige) ben = `${Math.round(km(forrige, p.ll))} km`;
+    if (p.ll) forrige = p.ll;
+    const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
+    return `<li><div class="prik" style="background:${bg}">${label}</div>
+      <div class="navn">${esc(navn)}${p.p ? ` <span class="hex">${esc(p.p)}</span>` : ""}</div>
+      <div class="km">${ben}</div></li>`;
+  }).join("");
+}
+
+start();
+</script>
+</body>
+</html>
