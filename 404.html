@@ -162,7 +162,7 @@ function punkterFor(rute) {
   return [
     { type: "afs", ...DATA.afs },
     ...rute.hop.map((h, i) => ({ type: "hop", nr: i + 1, ...h })),
-    { type: "mod", ...DATA.mod },
+    { type: "mod", ...DATA.mod, n: "KOKbot 🧑‍🍳", radio: DATA.mod?.n },
   ];
 }
 
@@ -239,7 +239,7 @@ function vælg(i) {
     const ikon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: `<div class="prik" style="background:${bg};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>` });
     LAG.push(L.marker(p.ll, { icon: ikon }).addTo(KORT).bindPopup(
-      `<b>${nodeLink(p.n || "Ukendt", p.k)}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}` +
+      `<b>${nodeLink(p.n || "Ukendt", p.k)}</b>${p.radio ? `<br>modtaget af ${esc(p.radio)}` : ""}${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}` +
       `${p.s ? `<br>${sidstSet(p.s)}` : ""}` +
       `${p.mv ? `<br>${p.mv.hs ? p.mv.hs + "-byte · " : ""}${esc(p.mv.cs || p.mv.ds || "intet scope")}` : ""}`));
   }
@@ -274,7 +274,8 @@ function visListe(punkter) {
     const bg = !p.ll ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
     const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
-    const under = [p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s)].filter(Boolean).join(" · ");
+    const under = [p.radio ? `modtaget af ${esc(p.radio)}` : "",
+                   p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s)].filter(Boolean).join(" · ");
     const alt = p.alt?.length
       ? `<div class="alt">? Usikkert hop – ${p.alt.length === 1 ? "1 anden mulig" : p.alt.length + " andre mulige"}: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
     const b = indTil[i];
