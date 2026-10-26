@@ -36,6 +36,9 @@
   .fejl { padding:40px 16px; text-align:center; color:var(--svag); }
   footer { color:var(--svag); font-size:12px; padding: 0 16px 16px; }
   .leaflet-container { background:var(--bg); }
+  a.node { color:inherit; text-decoration: underline; text-decoration-color: var(--linje); text-underline-offset: 3px; }
+  a.node:hover { text-decoration-color: currentColor; }
+  .leaflet-popup-content a.node { color:#1c1c1c; }
 </style>
 </head>
 <body>
@@ -73,6 +76,14 @@ function fejl(tekst) {
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
+// Navn som link til noden på meshview.dk, når den fulde public key kendes
+function nodeLink(navn, k) {
+  const t = esc(navn);
+  return /^[0-9a-fA-F]{64}$/.test(k || "")
+    ? `<a class="node" href="https://meshview.dk/#/nodes/${k.toLowerCase()}" target="_blank" rel="noopener">${t}</a>`
+    : t;
+}
+
 async function start() {
   const id = hentId();
   if (!id) return fejl("Linket mangler et sti-ID.");
@@ -104,9 +115,9 @@ function tegn(d) {
 
   // Punkter i rækkefølge: afsender → hop … → modtager
   const punkter = [
-    { type: "afs", n: d.afs?.n, ll: d.afs?.ll },
-    ...d.hop.map((h, i) => ({ type: "hop", nr: i + 1, n: h.n, p: h.p, ll: h.ll })),
-    { type: "mod", n: d.mod?.n, ll: d.mod?.ll },
+    { type: "afs", n: d.afs?.n, k: d.afs?.k, ll: d.afs?.ll },
+    ...d.hop.map((h, i) => ({ type: "hop", nr: i + 1, n: h.n, k: h.k, p: h.p, ll: h.ll })),
+    { type: "mod", n: d.mod?.n, k: d.mod?.k, ll: d.mod?.ll },
   ];
 
   const kort = L.map("kort", { zoomControl: true, attributionControl: true });
@@ -137,7 +148,7 @@ function tegn(d) {
       html: `<div class="prik" style="background:${farver[p.type]};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>`
     });
     L.marker(p.ll, { icon: ikon }).addTo(kort)
-      .bindPopup(`<b>${esc(p.n || "Ukendt")}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}`);
+      .bindPopup(`<b>${nodeLink(p.n || "Ukendt", p.k)}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}`);
   }
 
   if (kendte.length >= 2) kort.fitBounds(L.latLngBounds(kendte.map(p => p.ll)).pad(0.2));
@@ -154,7 +165,7 @@ function tegn(d) {
     if (p.ll) forrige = p.ll;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
     return `<li><div class="prik" style="background:${bg}">${label}</div>
-      <div class="navn">${esc(navn)}${p.p ? ` <span class="hex">${esc(p.p)}</span>` : ""}</div>
+      <div class="navn">${nodeLink(navn, p.k)}${p.p ? ` <span class="hex">${esc(p.p)}</span>` : ""}</div>
       <div class="km">${ben}</div></li>`;
   }).join("");
 }
