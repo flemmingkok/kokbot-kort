@@ -76,7 +76,7 @@
   <div class="ruter" id="ruter"></div>
   <ol id="liste"></ol>
 </main>
-<footer>KOKbot · DK_8700_KOK, Horsens · Positioner fra offentlige adverts. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).</footer>
+<footer>KOKbot · DK_8700_KOK, Horsens · Positioner fra offentlige adverts. For DM'er vises V3'ens gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).</footer>
 
 <script>
 const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
@@ -256,12 +256,14 @@ function visListe(punkter) {
   const længst = stykker.reduce((m, b) => b.km > m.km ? b : m, { km: 0 });
 
   const chips = [r.hop.length ? `${r.hop.length} hop` : "Direkte"];
+  if (DATA.kanal === "DM") chips.unshift("DM");
   if (DATA.bph) chips.push(`${DATA.bph}-byte`);
   chips.push(DATA.scope ? `scope ${DATA.scope}` : "uden scope");
   if (r.snr != null) chips.push(`${Math.round(r.snr)} dB / ${r.rssi} dBm`);
   if (ialt) chips.push(`${Math.round(ialt)} km i alt`);
   if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
   if (DATA.ruter.length > 1) chips.push(`${DATA.ruter.length} ruter hørt`);
+  if (DATA.rute_kilde === "kontakt") chips.push("gemt DM-rute");
   document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
 
   // Hvilket stykke ender ved punkt i? (til afstand og profil-knap)
