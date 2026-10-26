@@ -10,11 +10,11 @@
 <style>
   :root { --bg:#f6f5f2; --kort:#ffffff; --tekst:#1c1c1c; --svag:#6b6b6b; --linje:#e2dfd8;
           --afs:#2563eb; --mod:#15803d; --ukendt:#9ca3af; --advar:#b45309; --god:#15803d; --slet:#b91c1c;
-          --jord:#c8b89a; color-scheme: light; }
+          --jord:#c8b89a; --link:#1d4ed8; color-scheme: light; }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#111214; --kort:#1b1d21; --tekst:#ececec; --svag:#9a9a9a; --linje:#2c2f35;
             --afs:#60a5fa; --mod:#4ade80; --ukendt:#6b7280; --advar:#fbbf24; --god:#4ade80; --slet:#f87171;
-            --jord:#5b5140; color-scheme: dark; }
+            --jord:#5b5140; --link:#93c5fd; color-scheme: dark; }
   }
   * { box-sizing: border-box; }
   html, body { margin:0; background:var(--bg); color:var(--tekst);
@@ -51,9 +51,12 @@
   .dom { font-size:13px; margin-top:4px; }
   .fejl { padding:40px 16px; text-align:center; color:var(--svag); }
   footer { color:var(--svag); font-size:12px; padding: 0 16px 20px; max-width: 900px; margin: 0 auto; }
-  a.node { color:inherit; text-decoration: underline; text-decoration-color: var(--linje); text-underline-offset: 3px; }
-  a.node:hover { text-decoration-color: currentColor; }
-  .leaflet-popup-content a.node { color:#1c1c1c; }
+  a.node { color:var(--link); font-weight:550; text-decoration: underline; text-decoration-thickness: 1.5px;
+           text-underline-offset: 3px; }
+  a.node::after { content:" ↗"; font-size:.85em; font-weight:400; text-decoration:none; display:inline-block; margin-left:1px; }
+  a.node:hover, a.node:active { opacity:.75; }
+  .leaflet-popup-content a.node { color:#1d4ed8; }
+  h1 a.node { font-weight:650; }
   .leaflet-container { background:var(--bg); }
 </style>
 </head>
