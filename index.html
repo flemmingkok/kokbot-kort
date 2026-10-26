@@ -9,36 +9,52 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root { --bg:#f6f5f2; --kort:#ffffff; --tekst:#1c1c1c; --svag:#6b6b6b; --linje:#e2dfd8;
-          --afs:#2563eb; --hop:#d97706; --mod:#15803d; --ukendt:#9ca3af; color-scheme: light; }
+          --afs:#2563eb; --mod:#15803d; --ukendt:#9ca3af; --advar:#b45309; --god:#15803d; --slet:#b91c1c;
+          --jord:#c8b89a; color-scheme: light; }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#111214; --kort:#1b1d21; --tekst:#ececec; --svag:#9a9a9a; --linje:#2c2f35;
-            --afs:#60a5fa; --hop:#fbbf24; --mod:#4ade80; --ukendt:#6b7280; color-scheme: dark; }
+            --afs:#60a5fa; --mod:#4ade80; --ukendt:#6b7280; --advar:#fbbf24; --god:#4ade80; --slet:#f87171;
+            --jord:#5b5140; color-scheme: dark; }
   }
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--tekst);
+  html, body { margin:0; background:var(--bg); color:var(--tekst);
     font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { padding: env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); display:flex; flex-direction:column; }
-  header { padding: 14px 16px 10px; }
+  body { padding: env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0); }
+  header { padding: 14px 16px 10px; max-width: 900px; margin: 0 auto; }
   h1 { font-size: 17px; margin:0 0 2px; font-weight:650; word-break: break-word; }
   .meta { color:var(--svag); font-size:13px; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .chip { background:var(--kort); border:1px solid var(--linje); border-radius:999px; padding:2px 10px; font-size:13px; }
-  #kort { flex: 1 1 55vh; min-height: 300px; border-top:1px solid var(--linje); border-bottom:1px solid var(--linje); }
-  section { padding: 12px 16px 20px; }
+  #kort { height: 55vh; min-height: 320px; border-top:1px solid var(--linje); border-bottom:1px solid var(--linje); }
+  main { max-width: 900px; margin: 0 auto; padding: 10px 16px 20px; }
+  .ruter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .rute { border:1px solid var(--linje); background:var(--kort); color:var(--tekst); border-radius:8px;
+          padding:5px 10px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .rute[aria-pressed="true"] { outline:2px solid currentColor; outline-offset:-1px; font-weight:600; }
+  .streg { width:16px; height:4px; border-radius:2px; display:inline-block; }
   ol { list-style:none; margin:0; padding:0; }
-  li { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--linje); }
+  li { padding:8px 0; border-bottom:1px solid var(--linje); }
   li:last-child { border-bottom:0; }
+  .række { display:flex; align-items:center; gap:10px; }
   .prik { width:22px; height:22px; border-radius:50%; flex:none; display:grid; place-items:center;
           color:#fff; font-size:11px; font-weight:700; }
-  .navn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .hex { font-family: ui-monospace, Menlo, monospace; color:var(--svag); font-size:12px; }
-  .km { color:var(--svag); font-size:13px; white-space:nowrap; }
+  .navn { flex:1; min-width:0; }
+  .navn .t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+  .under { color:var(--svag); font-size:12px; }
+  .hex { font-family: ui-monospace, Menlo, monospace; }
+  .km { color:var(--svag); font-size:13px; white-space:nowrap; text-align:right; }
+  .knap { border:1px solid var(--linje); background:var(--kort); color:var(--tekst); border-radius:6px;
+          font-size:12px; padding:2px 8px; cursor:pointer; margin-top:3px; }
+  .alt { color:var(--advar); font-size:12px; margin-top:2px; }
+  .profil { margin:8px 0 2px 32px; }
+  .profil svg { width:100%; height:auto; display:block; }
+  .dom { font-size:13px; margin-top:4px; }
   .fejl { padding:40px 16px; text-align:center; color:var(--svag); }
-  footer { color:var(--svag); font-size:12px; padding: 0 16px 16px; }
-  .leaflet-container { background:var(--bg); }
+  footer { color:var(--svag); font-size:12px; padding: 0 16px 20px; max-width: 900px; margin: 0 auto; }
   a.node { color:inherit; text-decoration: underline; text-decoration-color: var(--linje); text-underline-offset: 3px; }
   a.node:hover { text-decoration-color: currentColor; }
   .leaflet-popup-content a.node { color:#1c1c1c; }
+  .leaflet-container { background:var(--bg); }
 </style>
 </head>
 <body>
@@ -48,12 +64,23 @@
   <div class="chips" id="chips"></div>
 </header>
 <div id="kort"></div>
-<section><ol id="liste"></ol></section>
-<footer>KOKbot · DK_8700_KOK, Horsens · Positioner fra offentlige adverts. Hop-præfikser kan i sjældne tilfælde pege på en forkert repeater.</footer>
+<main>
+  <div class="ruter" id="ruter"></div>
+  <ol id="liste"></ol>
+</main>
+<footer>KOKbot · DK_8700_KOK, Horsens · Positioner fra offentlige adverts. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).</footer>
 
 <script>
 const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
-const farve = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const RUTEFARVER = ["#d97706", "#7c3aed", "#0891b2", "#db2777", "#65a30d"];
+const ANTENNE_M = 5;          // antaget antennehøjde over terræn
+const FREKVENS_GHZ = 0.869;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nodeLink = (navn, k) => /^[0-9a-fA-F]{64}$/.test(k || "")
+  ? `<a class="node" href="https://meshview.dk/#/nodes/${k.toLowerCase()}" target="_blank" rel="noopener">${esc(navn)}</a>`
+  : esc(navn);
 
 function hentId() {
   const h = location.hash.replace(/^#/, "");
@@ -69,26 +96,25 @@ function km(a, b) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+function sidstSet(s) {
+  if (!s) return "";
+  const t = (Date.now() / 1000 - s) / 3600;
+  if (t < 1) return "set for under 1 t siden";
+  if (t < 48) return `set for ${Math.round(t)} t siden`;
+  const d = Math.round(t / 24);
+  return d > 14 ? `⚠️ ikke set i ${d} dage` : `set for ${d} dage siden`;
+}
+
 function fejl(tekst) {
   document.getElementById("titel").textContent = "Ingen sti";
   document.getElementById("kort").outerHTML = `<div class="fejl">${tekst}</div>`;
-}
-
-function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-
-// Navn som link til noden på meshview.dk, når den fulde public key kendes
-function nodeLink(navn, k) {
-  const t = esc(navn);
-  return /^[0-9a-fA-F]{64}$/.test(k || "")
-    ? `<a class="node" href="https://meshview.dk/#/nodes/${k.toLowerCase()}" target="_blank" rel="noopener">${t}</a>`
-    : t;
 }
 
 async function start() {
   const id = hentId();
   if (!id) return fejl("Linket mangler et sti-ID.");
   let d;
-  for (let forsøg = 0; forsøg < 6; forsøg++) {           // nye stier kan være op til ~1 min om at dukke op
+  for (let forsøg = 0; forsøg < 6; forsøg++) {        // nye stier kan være op til ~1 min om at dukke op
     try {
       const svar = await fetch(DATA_URL(id), { cache: "no-store" });
       if (svar.ok) { d = await svar.json(); break; }
@@ -97,77 +123,202 @@ async function start() {
     await new Promise(r => setTimeout(r, 10000));
   }
   if (!d) return fejl("Stien findes ikke (endnu). Prøv igen om lidt.");
-  tegn(d);
+  if (!d.ruter) d.ruter = [{ hop: d.hop || [], snr: d.snr, rssi: d.rssi }];   // v1-data
+  vis(d);
 }
 
-function tegn(d) {
-  document.title = `KOKbot – ${d.afs?.n || "sti"}`;
-  document.getElementById("titel").textContent = d.afs?.n || "Ukendt afsender";
-  const tid = d.t ? new Date(d.t * 1000).toLocaleString("da-DK", { dateStyle: "medium", timeStyle: "short" }) : "";
-  document.getElementById("meta").textContent = `${tid}${d.kanal ? " · " + d.kanal : ""}`;
+// ---------- Hovedvisning ----------
 
-  const chips = [];
-  chips.push(d.hop.length === 0 ? "Direkte" : `${d.hop.length} hop`);
-  if (d.bph) chips.push(`${d.bph}-byte`);
-  chips.push(d.scope ? `scope ${d.scope}` : "uden scope");
-  if (d.snr != null) chips.push(`${Math.round(d.snr)} dB / ${d.rssi} dBm`);
-  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+let KORT, LAG = [], DATA, VALGT = 0;
 
-  // Punkter i rækkefølge: afsender → hop … → modtager
-  const punkter = [
-    { type: "afs", n: d.afs?.n, k: d.afs?.k, ll: d.afs?.ll },
-    ...d.hop.map((h, i) => ({ type: "hop", nr: i + 1, n: h.n, k: h.k, p: h.p, ll: h.ll })),
-    { type: "mod", n: d.mod?.n, k: d.mod?.k, ll: d.mod?.ll },
+function punkterFor(rute) {
+  return [
+    { type: "afs", ...DATA.afs },
+    ...rute.hop.map((h, i) => ({ type: "hop", nr: i + 1, ...h })),
+    { type: "mod", ...DATA.mod },
   ];
+}
 
-  const kort = L.map("kort", { zoomControl: true, attributionControl: true });
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18, attribution: "© OpenStreetMap"
-  }).addTo(kort);
-
-  const kendte = punkter.filter(p => Array.isArray(p.ll));
-  const farver = { afs: farve("--afs"), hop: farve("--hop"), mod: farve("--mod") };
-
-  // Linje mellem kendte punkter; stiplet hvor et hop mangler position
+function ben(punkter) {
+  // Stykker mellem kendte punkter; "mangler" hvis der ligger ukendte hop imellem
+  const ud = [];
   for (let i = 0; i < punkter.length - 1; i++) {
-    const a = punkter[i];
-    if (!a.ll) continue;
+    if (!punkter[i].ll) continue;
     let j = i + 1, mangler = false;
     while (j < punkter.length && !punkter[j].ll) { mangler = true; j++; }
     if (j >= punkter.length) break;
-    L.polyline([a.ll, punkter[j].ll], {
-      color: mangler ? farve("--ukendt") : farve("--hop"), weight: 3, opacity: .9,
-      dashArray: mangler ? "6 8" : null
-    }).addTo(kort);
+    ud.push({ fra: i, til: j, a: punkter[i], b: punkter[j], km: km(punkter[i].ll, punkter[j].ll), mangler });
+  }
+  return ud;
+}
+
+function vis(d) {
+  DATA = d;
+  document.title = `KOKbot – ${d.afs?.n || "sti"}`;
+  document.getElementById("titel").innerHTML = nodeLink(d.afs?.n || "Ukendt afsender", d.afs?.k);
+  const tid = d.t ? new Date(d.t * 1000).toLocaleString("da-DK", { dateStyle: "medium", timeStyle: "short" }) : "";
+  document.getElementById("meta").textContent = `${tid}${d.kanal ? " · " + d.kanal : ""}`;
+
+  KORT = L.map("kort");
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(KORT);
+  const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Satellit © Esri" });
+  L.control.layers({ "Kort": osm, "Satellit": sat }, null, { position: "topright" }).addTo(KORT);
+
+  // Rutevælger
+  const rv = document.getElementById("ruter");
+  if (d.ruter.length > 1) {
+    rv.innerHTML = d.ruter.map((r, i) =>
+      `<button class="rute" data-i="${i}" aria-pressed="${i === 0}">
+         <span class="streg" style="background:${RUTEFARVER[i % 5]}"></span>
+         Rute ${i + 1} · ${r.hop.length} hop${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}</button>`).join("");
+    rv.querySelectorAll(".rute").forEach(b => b.onclick = () => vælg(+b.dataset.i));
   }
 
-  for (const p of kendte) {
-    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
-    const ikon = L.divIcon({
-      className: "", iconSize: [24, 24], iconAnchor: [12, 12],
-      html: `<div class="prik" style="background:${farver[p.type]};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>`
-    });
-    L.marker(p.ll, { icon: ikon }).addTo(kort)
-      .bindPopup(`<b>${nodeLink(p.n || "Ukendt", p.k)}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}`);
+  // Zoom til alle kendte punkter på tværs af ruter
+  const alle = [d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll))].filter(Array.isArray);
+  if (alle.length >= 2) KORT.fitBounds(L.latLngBounds(alle).pad(0.2));
+  else if (alle.length === 1) KORT.setView(alle[0], 12);
+  else KORT.setView([56.0, 10.0], 7);
+
+  vælg(0);
+}
+
+function vælg(i) {
+  VALGT = i;
+  document.querySelectorAll(".rute").forEach(b => b.setAttribute("aria-pressed", +b.dataset.i === i));
+  LAG.forEach(l => KORT.removeLayer(l)); LAG = [];
+
+  // Tegn alle ruter – den valgte øverst og tydeligst
+  const rækkefølge = DATA.ruter.map((_, j) => j).filter(j => j !== i).concat([i]);
+  for (const j of rækkefølge) {
+    const valgt = j === i, farve = RUTEFARVER[j % 5];
+    for (const b of ben(punkterFor(DATA.ruter[j]))) {
+      LAG.push(L.polyline([b.a.ll, b.b.ll], {
+        color: b.mangler ? css("--ukendt") : farve, weight: valgt ? 4 : 2.5,
+        opacity: valgt ? .95 : .45, dashArray: b.mangler ? "6 8" : null
+      }).addTo(KORT));
+    }
   }
 
-  if (kendte.length >= 2) kort.fitBounds(L.latLngBounds(kendte.map(p => p.ll)).pad(0.2));
-  else if (kendte.length === 1) kort.setView(kendte[0].ll, 12);
-  else kort.setView([56.0, 10.0], 7);
+  // Markører for den valgte rute
+  const punkter = punkterFor(DATA.ruter[i]);
+  const farve = RUTEFARVER[i % 5];
+  for (const p of punkter) {
+    if (!p.ll) continue;
+    const bg = p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
+    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : (p.alt?.length ? "?" : p.nr);
+    const ikon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+      html: `<div class="prik" style="background:${bg};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>` });
+    LAG.push(L.marker(p.ll, { icon: ikon }).addTo(KORT).bindPopup(
+      `<b>${nodeLink(p.n || "Ukendt", p.k)}</b>${p.p ? `<br><span class="hex">${esc(p.p)}</span>` : ""}` +
+      `${p.s ? `<br>${sidstSet(p.s)}` : ""}`));
+  }
 
-  // Liste med afstand pr. ben
-  let forrige = null;
-  document.getElementById("liste").innerHTML = punkter.map(p => {
+  visListe(punkter);
+}
+
+// ---------- Liste, nøgletal og usikre hop ----------
+
+function visListe(punkter) {
+  const r = DATA.ruter[VALGT], farve = RUTEFARVER[VALGT % 5];
+  const stykker = ben(punkter);
+  const ialt = stykker.reduce((s, b) => s + b.km, 0);
+  const længst = stykker.reduce((m, b) => b.km > m.km ? b : m, { km: 0 });
+
+  const chips = [r.hop.length ? `${r.hop.length} hop` : "Direkte"];
+  if (DATA.bph) chips.push(`${DATA.bph}-byte`);
+  chips.push(DATA.scope ? `scope ${DATA.scope}` : "uden scope");
+  if (r.snr != null) chips.push(`${Math.round(r.snr)} dB / ${r.rssi} dBm`);
+  if (ialt) chips.push(`${Math.round(ialt)} km i alt`);
+  if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
+  if (DATA.ruter.length > 1) chips.push(`${DATA.ruter.length} ruter hørt`);
+  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+
+  // Hvilket stykke ender ved punkt i? (til afstand og profil-knap)
+  const indTil = {};
+  stykker.forEach((b, n) => indTil[b.til] = n);
+
+  document.getElementById("liste").innerHTML = punkter.map((p, i) => {
+    const bg = !p.ll ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
     const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
-    const bg = p.ll ? farver[p.type] : farve("--ukendt");
-    let ben = "";
-    if (p.ll && forrige) ben = `${Math.round(km(forrige, p.ll))} km`;
-    if (p.ll) forrige = p.ll;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
-    return `<li><div class="prik" style="background:${bg}">${label}</div>
-      <div class="navn">${nodeLink(navn, p.k)}${p.p ? ` <span class="hex">${esc(p.p)}</span>` : ""}</div>
-      <div class="km">${ben}</div></li>`;
-  }).join("");
+    const under = [p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s)].filter(Boolean).join(" · ");
+    const alt = p.alt?.length
+      ? `<div class="alt">? Usikkert hop – ${p.alt.length} andre mulige: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
+    const b = indTil[i];
+    const st = b !== undefined ? stykker[b] : null;
+    const kmTekst = st ? `${Math.round(st.km)} km${st.mangler ? " *" : ""}` : "";
+    const knap = st && !st.mangler ? `<br><button class="knap" data-b="${b}">Terrænprofil</button>` : "";
+    return `<li><div class="række"><div class="prik" style="background:${bg}">${label}</div>
+      <div class="navn"><span class="t">${nodeLink(navn, p.k)}</span>${under ? `<span class="under">${under}</span>` : ""}${alt}</div>
+      <div class="km">${kmTekst}${knap}</div></div><div class="profil" id="profil-${b}"></div></li>`;
+  }).join("") + (stykker.some(s => s.mangler) ? `<li class="under">* Afstand forbi hop uden kendt position.</li>` : "");
+
+  document.querySelectorAll(".knap").forEach(k => k.onclick = () => profil(stykker[+k.dataset.b], +k.dataset.b, k));
+}
+
+// ---------- Terrænprofil med Fresnel-zone ----------
+
+async function profil(st, n, knap) {
+  const boks = document.getElementById(`profil-${n}`);
+  if (boks.innerHTML) { boks.innerHTML = ""; knap.textContent = "Terrænprofil"; return; }
+  knap.textContent = "Henter…";
+  const N = 60, [la1, lo1] = st.a.ll, [la2, lo2] = st.b.ll;
+  const lat = [], lon = [];
+  for (let i = 0; i < N; i++) { const f = i / (N - 1); lat.push((la1 + (la2 - la1) * f).toFixed(5)); lon.push((lo1 + (lo2 - lo1) * f).toFixed(5)); }
+  let høj;
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+    høj = (await r.json()).elevation;
+    if (!Array.isArray(høj) || høj.length !== N) throw 0;
+  } catch (e) { knap.textContent = "Terrænprofil"; boks.innerHTML = `<div class="under">Kunne ikke hente højdedata.</div>`; return; }
+  knap.textContent = "Skjul profil";
+
+  const D = st.km * 1000, R = 6371000 * 4 / 3;               // effektiv jordradius (k = 4/3)
+  const hA = høj[0] + ANTENNE_M, hB = høj[N - 1] + ANTENNE_M;
+  let minFrihed = Infinity, minFresnelAndel = Infinity;
+  const pkt = høj.map((h, i) => {
+    const d1 = D * i / (N - 1), d2 = D - d1;
+    const bule = d1 * d2 / (2 * R);
+    const jord = h + bule;
+    const sigte = hA + (hB - hA) * d1 / D;
+    const f1 = 17.32 * Math.sqrt((d1 / 1000) * (d2 / 1000) / (FREKVENS_GHZ * (D / 1000) || 1));
+    if (i > 0 && i < N - 1) {
+      minFrihed = Math.min(minFrihed, sigte - jord);
+      if (f1 > 0) minFresnelAndel = Math.min(minFresnelAndel, (sigte - jord) / f1);
+    }
+    return { d: d1, jord, sigte, f1 };
+  });
+
+  const B = 640, H = 170, ml = 34, mb = 18, mt = 8;
+  const ymin = Math.min(...pkt.map(p => Math.min(p.jord, p.sigte - p.f1))) - 5;
+  const ymax = Math.max(...pkt.map(p => Math.max(p.jord, p.sigte + p.f1))) + 5;
+  const x = d => ml + (B - ml - 6) * d / D, y = v => mt + (H - mt - mb) * (1 - (v - ymin) / (ymax - ymin));
+  const jordSti = `M${x(0)},${y(ymin)} ` + pkt.map(p => `L${x(p.d).toFixed(1)},${y(p.jord).toFixed(1)}`).join(" ") + ` L${x(D)},${y(ymin)} Z`;
+  const fUnder = pkt.map((p, i) => `${i ? "L" : "M"}${x(p.d).toFixed(1)},${y(p.sigte - 0.6 * p.f1).toFixed(1)}`).join(" ");
+  const fOver = pkt.map((p, i) => `${i ? "L" : "M"}${x(p.d).toFixed(1)},${y(p.sigte + p.f1).toFixed(1)}`).join(" ");
+  const fUnder100 = pkt.map((p, i) => `${i ? "L" : "M"}${x(p.d).toFixed(1)},${y(p.sigte - p.f1).toFixed(1)}`).join(" ");
+  const tekst = css("--svag");
+
+  let dom, farve;
+  if (minFrihed < 0) { dom = "Terrænet blokerer den direkte sigtelinje."; farve = css("--slet"); }
+  else if (minFresnelAndel < 0.6) { dom = `Fresnel-zonen er delvist blokeret (${Math.round(minFresnelAndel * 100)} % fri – under 60 % giver ekstra dæmpning).`; farve = css("--advar"); }
+  else { dom = "Fri sigtelinje og Fresnel-zone."; farve = css("--god"); }
+
+  boks.innerHTML = `<svg viewBox="0 0 ${B} ${H}" role="img" aria-label="Terrænprofil">
+    <path d="${jordSti}" fill="${css("--jord")}" opacity=".85"/>
+    <path d="${fOver}" fill="none" stroke="${tekst}" stroke-width="1" stroke-dasharray="3 4" opacity=".5"/>
+    <path d="${fUnder100}" fill="none" stroke="${tekst}" stroke-width="1" stroke-dasharray="3 4" opacity=".5"/>
+    <path d="${fUnder}" fill="none" stroke="${farve}" stroke-width="1.2" stroke-dasharray="5 3"/>
+    <line x1="${x(0)}" y1="${y(pkt[0].sigte)}" x2="${x(D)}" y2="${y(pkt[N - 1].sigte)}" stroke="${farve}" stroke-width="2"/>
+    <text x="2" y="${y(ymax) + 10}" font-size="10" fill="${tekst}">${Math.round(ymax)} m</text>
+    <text x="2" y="${y(ymin)}" font-size="10" fill="${tekst}">${Math.round(ymin)} m</text>
+    <text x="${ml}" y="${H - 4}" font-size="10" fill="${tekst}">0 km</text>
+    <text x="${B - 6}" y="${H - 4}" font-size="10" fill="${tekst}" text-anchor="end">${st.km.toFixed(1).replace(".", ",")} km</text>
+  </svg><div class="dom" style="color:${farve}">${dom}</div>
+  <div class="under">Fuld linje: sigtelinje. Farvet stiplet: 60 % af første Fresnel-zone. Grå stiplet: hele zonen. Jordkrumning er medregnet.</div>`;
 }
 
 start();
