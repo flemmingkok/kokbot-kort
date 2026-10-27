@@ -71,6 +71,7 @@
   <h1 id="titel">Henter sti…</h1>
   <div class="meta" id="meta"></div>
   <div class="chips" id="chips"></div>
+  <div class="meta" style="margin-top:6px">SNR og RSSI er målt på sidste hop – fra den repeater, der sendte beskeden videre til KOKbot.</div>
 </header>
 <div id="kort"></div>
 <main>
@@ -271,7 +272,17 @@ function visListe(punkter) {
   if (DATA.kanal === "DM") chips.unshift("DM");
   if (DATA.bph) chips.push(`${DATA.bph}-byte`);
   chips.push(DATA.scope ? `scope #${String(DATA.scope).replace(/^#/, "")}` : "uden scope");
-  if (r.snr != null) chips.push(`${Math.round(r.snr)} dB / ${r.rssi} dBm`);
+  if (r.snr != null) {
+    const snr = Math.round(r.snr);
+    const snrOrd = snr > 5 ? "godt" : snr >= 0 ? "ok" : snr >= -5 ? "svagt" : "på grænsen";
+    chips.push({ t: `SNR ${snr} dB · ${snrOrd}`,
+      title: "Signal/støj-forhold på sidste hop til KOKbot. Over 5 dB er godt; LoRa kan modtage ned til ca. −10 dB." });
+  }
+  if (r.rssi != null) {
+    const rssiOrd = r.rssi > -80 ? "kraftigt" : r.rssi > -100 ? "godt" : r.rssi > -115 ? "svagt" : "på grænsen";
+    chips.push({ t: `RSSI ${r.rssi} dBm · ${rssiOrd}`,
+      title: "Modtaget signalstyrke på sidste hop til KOKbot. Jo tættere på 0, jo kraftigere; grænsen er ca. −125 dBm." });
+  }
   if (ialt) chips.push(`${Math.round(ialt)} km i alt`);
   if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
   if (DATA.ruter.length > 1) chips.push(`hørt af KOKbot ad ${DATA.ruter.length} ruter`);
@@ -282,7 +293,9 @@ function visListe(punkter) {
     const tal = DATA.mvp ? `Set ${DATA.mvp.obs} gange af ${DATA.mvp.obsv} observere` : "Se pakken";
     mvChip = `<span class="chip"><a class="node" href="https://meshview.dk/#/packet/${DATA.ph}" target="_blank" rel="noopener">${esc(tal)} på meshview.dk</a></span>`;
   }
-  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("") + mvChip;
+  document.getElementById("chips").innerHTML = chips.map(c => typeof c === "string"
+    ? `<span class="chip">${esc(c)}</span>`
+    : `<span class="chip" title="${esc(c.title)}">${esc(c.t)}</span>`).join("") + mvChip;
 
   // Hvilket stykke ender ved punkt i? (til afstand og profil-knap)
   const indTil = {};
