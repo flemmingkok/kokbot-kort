@@ -158,9 +158,16 @@ async function start() {
 
 let KORT, LAG = [], DATA, VALGT = 0;
 
+const POS_MAX_ALDER = 3 * 3600;   // afsenderposition ældre end 3 t regnes som forældet
+function afsForældet() {
+  const a = DATA.afs || {};
+  if (a.frisk || !a.ll || !a.s) return false;
+  return ((DATA.t || Date.now() / 1000) - a.s) > POS_MAX_ALDER;
+}
+
 function punkterFor(rute) {
   return [
-    { type: "afs", ...DATA.afs },
+    { type: "afs", ...DATA.afs, gammel: afsForældet() },
     ...rute.hop.map((h, i) => ({ type: "hop", nr: i + 1, ...h })),
     { type: "mod", ...DATA.mod, n: "KOKbot 🧑‍🍳", radio: DATA.mod?.n },
   ];
@@ -174,7 +181,9 @@ function ben(punkter) {
     let j = i + 1, mangler = false;
     while (j < punkter.length && !punkter[j].ll) { mangler = true; j++; }
     if (j >= punkter.length) break;
-    ud.push({ fra: i, til: j, a: punkter[i], b: punkter[j], km: km(punkter[i].ll, punkter[j].ll), mangler });
+    const gammel = !!punkter[i].gammel;
+    ud.push({ fra: i, til: j, a: punkter[i], b: punkter[j], km: km(punkter[i].ll, punkter[j].ll),
+              mangler: mangler || gammel, gammel });
   }
   return ud;
 }
@@ -204,7 +213,7 @@ function vis(d) {
   }
 
   // Zoom til alle kendte punkter på tværs af ruter
-  const alle = [d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll))].filter(Array.isArray);
+  const alle = [afsForældet() ? null : d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll))].filter(Array.isArray);
   if (alle.length >= 2) KORT.fitBounds(L.latLngBounds(alle).pad(0.2));
   else if (alle.length === 1) KORT.setView(alle[0], 12);
   else KORT.setView([56.0, 10.0], 7);
@@ -234,8 +243,8 @@ function vælg(i) {
   const farve = RUTEFARVER[i % 5];
   for (const p of punkter) {
     if (!p.ll) continue;
-    const bg = p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
-    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : (p.alt?.length ? "?" : p.nr);
+    const bg = p.gammel ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
+    const label = p.type === "afs" ? (p.gammel ? "A?" : "A") : p.type === "mod" ? "K" : (p.alt?.length ? "?" : p.nr);
     const ikon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: `<div class="prik" style="background:${bg};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>` });
     LAG.push(L.marker(p.ll, { icon: ikon }).addTo(KORT).bindPopup(
@@ -252,8 +261,9 @@ function vælg(i) {
 function visListe(punkter) {
   const r = DATA.ruter[VALGT], farve = RUTEFARVER[VALGT % 5];
   const stykker = ben(punkter);
-  const ialt = stykker.reduce((s, b) => s + b.km, 0);
-  const længst = stykker.reduce((m, b) => b.km > m.km ? b : m, { km: 0 });
+  const sikre = stykker.filter(b => !b.gammel);
+  const ialt = sikre.reduce((s, b) => s + b.km, 0);
+  const længst = sikre.reduce((m, b) => b.km > m.km ? b : m, { km: 0 });
 
   const chips = [r.hop.length ? `${r.hop.length} hop` : "Direkte"];
   if (DATA.kanal === "DM") chips.unshift("DM");
@@ -271,12 +281,14 @@ function visListe(punkter) {
   stykker.forEach((b, n) => indTil[b.til] = n);
 
   document.getElementById("liste").innerHTML = punkter.map((p, i) => {
-    const bg = !p.ll ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
+    const bg = (!p.ll || p.gammel) ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
     const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
     const under = [p.radio ? `modtaget af ${esc(p.radio)}` : "",
                    p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s),
                    p.kilde === "meshview" ? "fundet via meshview.dk" : ""].filter(Boolean).join(" · ");
+    const forældet = p.gammel
+      ? `<div class="alt">⚠️ Position forældet – fra advert ${sidstSet(p.s).replace(/^set /, "")}. Afsenderen står sandsynligvis et andet sted, så første stykke er ikke medregnet.</div>` : "";
     const alt = p.alt?.length
       ? `<div class="alt">? Usikkert hop – ${p.alt.length === 1 ? "1 anden mulig" : p.alt.length + " andre mulige"}: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
     const b = indTil[i];
@@ -284,7 +296,7 @@ function visListe(punkter) {
     const kmTekst = st ? `${Math.round(st.km)} km${st.mangler ? " *" : ""}` : "";
     const knap = st && !st.mangler ? `<br><button class="knap" data-b="${b}">Terrænprofil</button>` : "";
     return `<li><div class="række"><div class="prik" style="background:${bg}">${label}</div>
-      <div class="navn"><span class="t">${nodeLink(navn, p.k)}</span>${under ? `<span class="under">${under}</span>` : ""}${mvTekst(p)}${alt}</div>
+      <div class="navn"><span class="t">${nodeLink(navn, p.k)}</span>${under ? `<span class="under">${under}</span>` : ""}${mvTekst(p)}${forældet}${alt}</div>
       <div class="km">${kmTekst}${knap}</div></div><div class="profil" id="profil-${b}"></div></li>`;
   }).join("") + (stykker.some(s => s.mangler) ? `<li class="under">* Afstand forbi hop uden kendt position.</li>` : "");
 
