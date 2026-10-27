@@ -216,12 +216,6 @@ function vis(d) {
     rv.querySelectorAll(".rute").forEach(b => b.onclick = () => vælg(+b.dataset.i));
   }
 
-  // Zoom til alle kendte punkter på tværs af ruter
-  const alle = [afsForældet() ? null : d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll).concat([r.obs?.ll]))].filter(Array.isArray);
-  if (alle.length >= 2) KORT.fitBounds(L.latLngBounds(alle).pad(0.2));
-  else if (alle.length === 1) KORT.setView(alle[0], 12);
-  else KORT.setView([56.0, 10.0], 7);
-
   vælg(0);
 }
 
@@ -256,6 +250,12 @@ function vælg(i) {
       `${p.s ? `<br>${sidstSet(p.s)}` : ""}` +
       `${p.mv ? `<br>${p.mv.hs ? p.mv.hs + "-byte · " : ""}${esc(p.mv.cs || p.mv.ds || "intet scope")}` : ""}`));
   }
+
+  // Zoom tæt ind på den valgte rute, så den fylder mest muligt i kortudsnittet
+  const synlige = punkter.filter(p => Array.isArray(p.ll) && !p.gammel).map(p => p.ll);
+  if (synlige.length >= 2) KORT.fitBounds(L.latLngBounds(synlige), { padding: [28, 28], maxZoom: 15 });
+  else if (synlige.length === 1) KORT.setView(synlige[0], 13);
+  else KORT.setView([56.0, 10.0], 7);
 
   visListe(punkter);
 }
