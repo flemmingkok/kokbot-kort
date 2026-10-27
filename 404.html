@@ -318,6 +318,10 @@ function visListe(punkter) {
     } else if (p.type === "mod" && r.snr != null) {
       signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af KOKbot)</span></div>`;
     }
+    if (p.hørt && p.type !== "mod") {
+      const hvem = p.type === "afs" ? "Hørt direkte af" : "Hørt lige efter af";
+      signal += `<div class="mv">${hvem} ${p.hørt.n} observer${p.hørt.n === 1 ? "" : "e"} · bedst ${sigTekst(p.hørt.snr, p.hørt.rssi)}</div>`;
+    }
     const forældet = p.gammel
       ? `<div class="alt">⚠️ Position forældet – fra advert ${sidstSet(p.s).replace(/^set /, "")}. Afsenderen står sandsynligvis et andet sted, så første stykke er ikke medregnet.</div>` : "";
     const alt = p.alt?.length
