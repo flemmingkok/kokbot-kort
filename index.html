@@ -76,7 +76,7 @@
   <div class="ruter" id="ruter"></div>
   <ol id="liste"></ol>
 </main>
-<footer>KOKbot · DK_8700_KOK, Horsens · Stier gemmes i 1 døgn og slettes derefter. Positioner fra offentlige adverts. For DM'er vises KOKbots gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).<br>Node-data (hash-størrelse, scopes) og node-links: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak for et fantastisk værktøj til det danske MeshCore-netværk.</footer>
+<footer>Kortet viser de ruter, KOKbot selv hørte (rute 1 er den, svaret bygger på) – meshview.dk viser, hvad alle observere i netværket hørte.<br>KOKbot · DK_8700_KOK, Horsens · Stier gemmes i 1 døgn og slettes derefter. Positioner fra offentlige adverts. For DM'er vises KOKbots gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).<br>Node-data (hash-størrelse, scopes) og node-links: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak for et fantastisk værktøj til det danske MeshCore-netværk.</footer>
 
 <script>
 const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
@@ -209,7 +209,7 @@ function vis(d) {
     rv.innerHTML = d.ruter.map((r, i) =>
       `<button class="rute" data-i="${i}" aria-pressed="${i === 0}">
          <span class="streg" style="background:${RUTEFARVER[i % 5]}"></span>
-         Rute ${i + 1} · ${r.hop.length} hop${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}</button>`).join("");
+         Rute ${i + 1} · ${r.hop.length ? r.hop.length + " hop" : "direkte"}${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}${i === 0 ? " · i svaret" : r.sen ? " · kom senere" : ""}</button>`).join("");
     rv.querySelectorAll(".rute").forEach(b => b.onclick = () => vælg(+b.dataset.i));
   }
 
@@ -273,10 +273,15 @@ function visListe(punkter) {
   if (r.snr != null) chips.push(`${Math.round(r.snr)} dB / ${r.rssi} dBm`);
   if (ialt) chips.push(`${Math.round(ialt)} km i alt`);
   if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
-  if (DATA.ruter.length > 1) chips.push(`${DATA.ruter.length} ruter hørt`);
+  if (DATA.ruter.length > 1) chips.push(`hørt af KOKbot ad ${DATA.ruter.length} ruter`);
   if (DATA.rute_kilde === "kontakt") chips.push("gemt DM-rute");
   if (DATA.rute_kilde === "seneste") chips.push("sandsynlig rute (seneste flood-DM)");
-  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+  let mvChip = "";
+  if (/^[0-9a-f]{16}$/.test(DATA.ph || "")) {
+    const tal = DATA.mvp ? `set ${DATA.mvp.obs} gange af ${DATA.mvp.obsv} observere` : "se pakken";
+    mvChip = `<span class="chip"><a class="node" href="https://meshview.dk/#/packet/${DATA.ph}" target="_blank" rel="noopener">${esc(tal)} på meshview.dk</a></span>`;
+  }
+  document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("") + mvChip;
 
   // Hvilket stykke ender ved punkt i? (til afstand og profil-knap)
   const indTil = {};
