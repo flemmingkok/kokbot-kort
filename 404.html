@@ -324,7 +324,7 @@ function visListe(punkter) {
       const navne = (p.hørt.o || []).map(o => `${nodeLink(o.n, o.k)} <span class="under">${Math.round(o.snr)} dB</span>`);
       const flere = p.hørt.n > navne.length && navne.length ? ` <span class="under">+${p.hørt.n - navne.length} flere</span>` : "";
       signal += `<div class="mv">${hvem} ${p.hørt.n} observer${p.hørt.n === 1 ? "" : "e"} · bedst ${sigTekst(p.hørt.snr, p.hørt.rssi)}</div>`
-             + (navne.length ? `<div class="mv">${navne.join(", ")}${flere}</div>` : "");
+             + (navne.length ? `<div class="mv">${navne.length === 1 ? "Første observer" : "Observere"}: ${navne.join(", ")}${flere}</div>` : "");
     }
     const forældet = p.gammel
       ? `<div class="alt">⚠️ Position forældet – fra advert ${sidstSet(p.s).replace(/^set /, "")}. Afsenderen står sandsynligvis et andet sted, så første stykke er ikke medregnet.</div>` : "";
