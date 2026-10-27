@@ -275,7 +275,8 @@ function visListe(punkter) {
     const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
     const under = [p.radio ? `modtaget af ${esc(p.radio)}` : "",
-                   p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s)].filter(Boolean).join(" · ");
+                   p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s),
+                   p.kilde === "meshview" ? "fundet via meshview.dk" : ""].filter(Boolean).join(" · ");
     const alt = p.alt?.length
       ? `<div class="alt">? Usikkert hop – ${p.alt.length === 1 ? "1 anden mulig" : p.alt.length + " andre mulige"}: ${p.alt.map(a => nodeLink(a.n || "ukendt", a.k)).join(", ")}</div>` : "";
     const b = indTil[i];
