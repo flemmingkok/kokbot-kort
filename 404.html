@@ -308,6 +308,16 @@ function visListe(punkter) {
     const under = [p.radio ? `modtaget af ${esc(p.radio)}` : "",
                    p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s),
                    p.kilde === "meshview" ? "fundet via meshview.dk" : ""].filter(Boolean).join(" · ");
+    // Signal på stykket ind til dette punkt
+    let signal = "";
+    const sigTekst = (snr, rssi) => `SNR ${Math.round(snr)} dB${rssi != null ? ` · RSSI ${rssi} dBm` : ""}`;
+    if (p.type === "hop") {
+      signal = p.lnk
+        ? `<div class="mv">Ind hertil: ${sigTekst(p.lnk.snr, p.lnk.rssi)} <span class="under">(målt af repeateren via meshview)</span></div>`
+        : (r.hop.some(h => h.lnk) ? `<div class="mv">Ind hertil: ikke målt</div>` : "");
+    } else if (p.type === "mod" && r.snr != null) {
+      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af KOKbot)</span></div>`;
+    }
     const forældet = p.gammel
       ? `<div class="alt">⚠️ Position forældet – fra advert ${sidstSet(p.s).replace(/^set /, "")}. Afsenderen står sandsynligvis et andet sted, så første stykke er ikke medregnet.</div>` : "";
     const alt = p.alt?.length
@@ -317,7 +327,7 @@ function visListe(punkter) {
     const kmTekst = st ? `${Math.round(st.km)} km${st.mangler ? " *" : ""}` : "";
     const knap = st && !st.mangler ? `<br><button class="knap" data-b="${b}">Terrænprofil</button>` : "";
     return `<li><div class="række"><div class="prik" style="background:${bg}">${label}</div>
-      <div class="navn"><span class="t">${nodeLink(navn, p.k)}</span>${under ? `<span class="under">${under}</span>` : ""}${mvTekst(p)}${forældet}${alt}</div>
+      <div class="navn"><span class="t">${nodeLink(navn, p.k)}</span>${under ? `<span class="under">${under}</span>` : ""}${signal}${mvTekst(p)}${forældet}${alt}</div>
       <div class="km">${kmTekst}${knap}</div></div><div class="profil" id="profil-${b}"></div></li>`;
   }).join("") + (stykker.some(s => s.mangler) ? `<li class="under">* Afstand forbi hop uden kendt position.</li>` : "");
 
