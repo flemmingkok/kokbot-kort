@@ -280,7 +280,7 @@ function visListe(punkter) {
   let mvChip = "";
   if (/^[0-9a-f]{16}$/.test(DATA.ph || "")) {
     const tal = DATA.mvp ? `Set ${DATA.mvp.obs} gange af ${DATA.mvp.obsv} observere` : "Se pakken";
-    mvChip = `<span class="chip"><a class="plain" href="https://meshview.dk/#/packet/${DATA.ph}" target="_blank" rel="noopener">${esc(tal)} på meshview.dk</a></span>`;
+    mvChip = `<span class="chip"><a class="node" href="https://meshview.dk/#/packet/${DATA.ph}" target="_blank" rel="noopener">${esc(tal)} på meshview.dk</a></span>`;
   }
   document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("") + mvChip;
 
