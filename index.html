@@ -182,6 +182,7 @@ function ben(punkter) {
     while (j < punkter.length && !punkter[j].ll) { mangler = true; j++; }
     if (j >= punkter.length) break;
     const gammel = !!punkter[i].gammel;
+    if (DATA.rute_kilde === "ukendt") mangler = true;   // direkte-routet DM uden kendt rute
     ud.push({ fra: i, til: j, a: punkter[i], b: punkter[j], km: km(punkter[i].ll, punkter[j].ll),
               mangler: mangler || gammel, gammel });
   }
@@ -265,7 +266,7 @@ function visListe(punkter) {
   const ialt = sikre.reduce((s, b) => s + b.km, 0);
   const længst = sikre.reduce((m, b) => b.km > m.km ? b : m, { km: 0 });
 
-  const chips = [r.hop.length ? `${r.hop.length} hop` : "Direkte"];
+  const chips = [r.hop.length ? `${r.hop.length} hop` : (DATA.rute_kilde === "ukendt" ? "rute ukendt" : "Direkte")];
   if (DATA.kanal === "DM") chips.unshift("DM");
   if (DATA.bph) chips.push(`${DATA.bph}-byte`);
   chips.push(DATA.scope ? `scope ${DATA.scope}` : "uden scope");
@@ -274,6 +275,7 @@ function visListe(punkter) {
   if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
   if (DATA.ruter.length > 1) chips.push(`${DATA.ruter.length} ruter hørt`);
   if (DATA.rute_kilde === "kontakt") chips.push("gemt DM-rute");
+  if (DATA.rute_kilde === "seneste") chips.push("sandsynlig rute (seneste flood-DM)");
   document.getElementById("chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
 
   // Hvilket stykke ender ved punkt i? (til afstand og profil-knap)
