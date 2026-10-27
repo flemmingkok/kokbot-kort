@@ -171,7 +171,8 @@ function punkterFor(rute) {
   return [
     { type: "afs", ...DATA.afs, gammel: afsForældet() },
     ...rute.hop.map((h, i) => ({ type: "hop", nr: i + 1, ...h })),
-    { type: "mod", ...DATA.mod, n: DATA.mod?.n || "DK_8700_KOK_HeltecV3" },
+    rute.obs ? { type: "mod", obs: true, ...rute.obs }
+             : { type: "mod", ...DATA.mod, n: DATA.mod?.n || "DK_8700_KOK_HeltecV3" },
   ];
 }
 
@@ -211,12 +212,12 @@ function vis(d) {
     rv.innerHTML = d.ruter.map((r, i) =>
       `<button class="rute" data-i="${i}" aria-pressed="${i === 0}">
          <span class="streg" style="background:${RUTEFARVER[i % 5]}"></span>
-         Rute ${i + 1} · ${r.hop.length ? r.hop.length + " hop" : "direkte"}${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}${i === 0 ? " · i svaret" : r.sen ? " · kom senere" : ""}</button>`).join("");
+         Rute ${i + 1} · ${r.hop.length ? r.hop.length + " hop" : "direkte"}${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}${i === 0 ? " · i svaret" : r.obs ? ` · til ${esc(String(r.obs.n || "observer").slice(0, 22))} (meshview)` : r.sen ? " · kom senere" : ""}</button>`).join("");
     rv.querySelectorAll(".rute").forEach(b => b.onclick = () => vælg(+b.dataset.i));
   }
 
   // Zoom til alle kendte punkter på tværs af ruter
-  const alle = [afsForældet() ? null : d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll))].filter(Array.isArray);
+  const alle = [afsForældet() ? null : d.afs?.ll, d.mod?.ll, ...d.ruter.flatMap(r => r.hop.map(h => h.ll).concat([r.obs?.ll]))].filter(Array.isArray);
   if (alle.length >= 2) KORT.fitBounds(L.latLngBounds(alle).pad(0.2));
   else if (alle.length === 1) KORT.setView(alle[0], 12);
   else KORT.setView([56.0, 10.0], 7);
@@ -247,7 +248,7 @@ function vælg(i) {
   for (const p of punkter) {
     if (!p.ll) continue;
     const bg = p.gammel ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
-    const label = p.type === "afs" ? (p.gammel ? "A?" : "A") : p.type === "mod" ? "K" : (p.alt?.length ? "?" : p.nr);
+    const label = p.type === "afs" ? (p.gammel ? "A?" : "A") : p.type === "mod" ? (p.obs ? "O" : "K") : (p.alt?.length ? "?" : p.nr);
     const ikon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: `<div class="prik" style="background:${bg};border:2px solid #fff;box-shadow:0 1px 4px #0006">${label}</div>` });
     LAG.push(L.marker(p.ll, { icon: ikon }).addTo(KORT).bindPopup(
@@ -303,7 +304,7 @@ function visListe(punkter) {
 
   document.getElementById("liste").innerHTML = punkter.map((p, i) => {
     const bg = (!p.ll || p.gammel) ? css("--ukendt") : p.type === "afs" ? css("--afs") : p.type === "mod" ? css("--mod") : farve;
-    const label = p.type === "afs" ? "A" : p.type === "mod" ? "K" : p.nr;
+    const label = p.type === "afs" ? "A" : p.type === "mod" ? (p.obs ? "O" : "K") : p.nr;
     const navn = p.n || (p.type === "hop" ? "Ukendt repeater" : "Ukendt");
     const under = [p.radio ? `modtaget af ${esc(p.radio)}` : "",
                    p.p ? `<span class="hex">${esc(p.p)}</span>` : "", sidstSet(p.s),
@@ -316,7 +317,7 @@ function visListe(punkter) {
         ? `<div class="mv">Ind hertil: ${sigTekst(p.lnk.snr, p.lnk.rssi)} <span class="under">(målt af repeateren via meshview)</span></div>`
         : (r.hop.some(h => h.lnk) ? `<div class="mv">Ind hertil: ikke målt</div>` : "");
     } else if (p.type === "mod" && r.snr != null) {
-      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af DK_8700_KOK_HeltecV3)</span></div>`;
+      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af ${p.obs ? "observeren, via meshview" : "DK_8700_KOK_HeltecV3"})</span></div>`;
     }
     if (p.hørt && p.type !== "mod") {
       const hvem = p.type === "afs" ? "Hørt direkte af" : "Hørt lige efter af";
