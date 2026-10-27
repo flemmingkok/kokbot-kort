@@ -49,7 +49,8 @@
   .alt { color:var(--advar); font-size:12px; margin-top:2px; }
   .mv { color:var(--svag); font-size:12px; }
   .mv .adv { color:var(--advar); }
-  details.ts { font-size:12px; color:var(--svag); }
+  details.ts { font-size:12px; color:var(--svag); display:inline; }
+  details.ts[open] { display:block; }
   details.ts summary { cursor:pointer; color:var(--link); width:max-content; }
   details.ts div { padding:2px 0 0 14px; }
   .profil { margin:8px 0 2px 32px; }
@@ -78,7 +79,8 @@
   <div class="ruter" id="ruter"></div>
   <ol id="liste"></ol>
 </main>
-<footer>Kortet viser de ruter, DK_8700_KOK_HeltecV3 selv hørte (rute 1 er den, svaret bygger på) – meshview.dk viser, hvad alle observere i netværket hørte.<br>DK_8700_KOK, Horsens · Stier gemmes i 1 døgn og slettes derefter. Positioner fra offentlige adverts. For DM'er vises V3'ens gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).<br>Node-data (hash-størrelse, scopes) og node-links: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak for et fantastisk værktøj til det danske MeshCore-netværk.</footer>
+<footer>Rute 1 er den, DK_8700_KOK_HeltecV3 hørte, og som svaret bygger på. Ruter mærket "meshview" er stier til andre observere. Stier gemmes i 1 døgn.<br>
+Positioner fra offentlige adverts. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofil antager 5 m antennehøjde (højdedata: Open-Meteo/Copernicus). Node-data: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak!</footer>
 
 <script>
 const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
@@ -113,16 +115,18 @@ function mvTekst(p) {
   if (!m) return "";
   const dele = [];
   if (m.hs) dele.push(`${m.hs}-byte${m.mbs && m.mbs !== "confirmed" ? " (ubekræftet)" : ""}`);
-  const sc = m.cs || m.ds;
+  const kons = String(m.cs || "").split(",").map(x => x.trim()).filter(x => x && x !== "*");
+  const sc = m.ds || kons[0];
   dele.push(sc ? `scope ${esc(sc)}` : "intet scope");
-  let advar = "";
   if (DATA.scope && p.type === "hop" && Array.isArray(m.ts) && m.ts.length &&
       !m.ts.some(t => norm(t) === norm(DATA.scope)))
-    advar = ` · <span class="adv">⚠️ bærer ikke #${esc(norm(DATA.scope))}</span>`;
-  const ts = m.ts?.length
-    ? `<details class="ts"><summary>bærer ${m.ts.length} scope${m.ts.length === 1 ? "" : "s"}</summary><div>${m.ts.map(esc).join(", ")}</div></details>`
-    : (p.type === "hop" ? `<div class="mv">ingen scopede pakker set båret</div>` : "");
-  return `<div class="mv">${dele.join(" · ")}${advar}</div>${ts}`;
+    dele.push(`<span class="adv">⚠️ bærer ikke #${esc(norm(DATA.scope))}</span>`);
+  let ts = "";
+  if (m.ts?.length)
+    ts = ` · <details class="ts"><summary>bærer ${m.ts.length} scope${m.ts.length === 1 ? "" : "s"}</summary><div>${m.ts.map(esc).join(", ")}</div></details>`;
+  else if (p.type === "hop")
+    dele.push("ingen scopede pakker set");
+  return `<div class="mv">${dele.join(" · ")}${ts}</div>`;
 }
 
 function sidstSet(s) {
@@ -317,14 +321,19 @@ function visListe(punkter) {
         ? `<div class="mv">Ind hertil: ${sigTekst(p.lnk.snr, p.lnk.rssi)} <span class="under">(målt af repeateren via meshview)</span></div>`
         : (r.hop.some(h => h.lnk) ? `<div class="mv">Ind hertil: ikke målt</div>` : "");
     } else if (p.type === "mod" && r.snr != null) {
-      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af ${p.obs ? "observeren, via meshview" : "DK_8700_KOK_HeltecV3"})</span></div>`;
+      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)}${p.obs ? ' <span class="under">(målt af observeren)</span>' : ""}</div>`;
     }
     if (p.hørt && p.type !== "mod") {
-      const hvem = p.type === "afs" ? "Hørt direkte af" : "Hørt lige efter af";
-      const navne = (p.hørt.o || []).map(o => `${nodeLink(o.n, o.k)} <span class="under">${Math.round(o.snr)} dB</span>`);
-      const flere = p.hørt.n > navne.length && navne.length ? ` <span class="under">+${p.hørt.n - navne.length} flere</span>` : "";
-      signal += `<div class="mv">${hvem} ${p.hørt.n} observer${p.hørt.n === 1 ? "" : "e"} · bedst ${sigTekst(p.hørt.snr, p.hørt.rssi)}</div>`
-             + (navne.length ? `<div class="mv">${navne.length === 1 ? "Første observer" : "Observere"}: ${navne.join(", ")}${flere}</div>` : "");
+      // Egen V3 vises allerede som K – udelad den som observer
+      const v3 = String(DATA.mod?.k || "416d6a").toLowerCase().slice(0, 12);
+      const obs = (p.hørt.o || []).filter(o => !String(o.k || "").toLowerCase().startsWith(v3));
+      if (obs.length) {
+        const hvem = p.type === "afs" ? "Hørt direkte af" : "Hørt lige efter af";
+        const navne = obs.map(o => `${nodeLink(o.n, o.k)} <span class="under">${Math.round(o.snr)} dB</span>`);
+        const ialt = p.hørt.n - ((p.hørt.o || []).length - obs.length);
+        const flere = ialt > obs.length ? ` <span class="under">+${ialt - obs.length} flere</span>` : "";
+        signal += `<div class="mv">${hvem}: ${navne.join(", ")}${flere}</div>`;
+      }
     }
     const forældet = p.gammel
       ? `<div class="alt">⚠️ Position forældet – fra advert ${sidstSet(p.s).replace(/^set /, "")}. Afsenderen står sandsynligvis et andet sted, så første stykke er ikke medregnet.</div>` : "";
