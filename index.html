@@ -29,6 +29,9 @@
   #kort { height: 55vh; min-height: 320px; border-top:1px solid var(--linje); border-bottom:1px solid var(--linje); }
   main { max-width: 900px; margin: 0 auto; padding: 10px 16px 20px; }
   .ruter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  #ruter { display:block; }
+  .rgruppe { margin-bottom: 6px; }
+  .rtitel { font-size:12px; color:var(--svag); margin: 0 0 4px; }
   .rute { border:1px solid var(--linje); background:var(--kort); color:var(--tekst); border-radius:6px;
           padding:5px 10px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; }
   .rute[aria-pressed="true"] { outline:2px solid currentColor; outline-offset:-1px; font-weight:600; }
@@ -213,10 +216,21 @@ function vis(d) {
   // Rutevælger
   const rv = document.getElementById("ruter");
   if (d.ruter.length > 1) {
-    rv.innerHTML = d.ruter.map((r, i) =>
+    const knap = (r, i, tekst) =>
       `<button class="rute" data-i="${i}" aria-pressed="${i === 0}">
-         <span class="streg" style="background:${RUTEFARVER[i % 5]}"></span>
-         Rute ${i + 1} · ${r.hop.length ? r.hop.length + " hop" : "direkte"}${r.snr != null ? ` · ${Math.round(r.snr)} dB` : ""}${i === 0 ? " · i svaret" : r.obs ? ` · til ${esc(String(r.obs.n || "observer").slice(0, 22))} (meshview)` : r.sen ? " · kom senere" : ""}</button>`).join("");
+         <span class="streg" style="background:${RUTEFARVER[i % 5]}"></span>${tekst}</button>`;
+    const sig = r => r.snr != null ? ` · ${Math.round(r.snr)} dB` : "";
+    const hop = r => r.hop.length ? r.hop.length + " hop" : "direkte";
+    const egne = [], mv = [];
+    d.ruter.forEach((r, i) => (r.obs ? mv : egne).push([r, i]));
+    let nr = 0;
+    const egneHtml = egne.map(([r, i]) => knap(r, i,
+      `Rute ${++nr} · ${hop(r)}${sig(r)}${i === 0 ? " · i svaret" : r.sen ? " · kom senere" : ""}`)).join("");
+    const mvHtml = mv.map(([r, i]) => knap(r, i,
+      `Til ${esc(String(r.obs.n || "observer").slice(0, 24))} · ${hop(r)}${sig(r)}`)).join("");
+    rv.innerHTML =
+      `<div class="rgruppe"><div class="rtitel">Til ${esc(d.mod?.n || "DK_8700_KOK_HeltecV3")}</div><div class="ruter">${egneHtml}</div></div>` +
+      (mv.length ? `<div class="rgruppe"><div class="rtitel">Udbredelse i netværket – stier til andre observere (meshview)</div><div class="ruter">${mvHtml}</div></div>` : "");
     rv.querySelectorAll(".rute").forEach(b => b.onclick = () => vælg(+b.dataset.i));
   }
 
