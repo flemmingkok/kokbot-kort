@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KOKbot – sti</title>
+<title>DK_8700_KOK – sti</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍🍳</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -71,14 +71,14 @@
   <h1 id="titel">Henter sti…</h1>
   <div class="meta" id="meta"></div>
   <div class="chips" id="chips"></div>
-  <div class="meta" style="margin-top:6px">SNR og RSSI er målt på sidste hop – fra den repeater, der sendte beskeden videre til KOKbot.</div>
+  <div class="meta" style="margin-top:6px">SNR og RSSI er målt på sidste hop – fra den repeater, der sendte beskeden videre til DK_8700_KOK_HeltecV3.</div>
 </header>
 <div id="kort"></div>
 <main>
   <div class="ruter" id="ruter"></div>
   <ol id="liste"></ol>
 </main>
-<footer>Kortet viser de ruter, KOKbot selv hørte (rute 1 er den, svaret bygger på) – meshview.dk viser, hvad alle observere i netværket hørte.<br>KOKbot · DK_8700_KOK, Horsens · Stier gemmes i 1 døgn og slettes derefter. Positioner fra offentlige adverts. For DM'er vises KOKbots gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).<br>Node-data (hash-størrelse, scopes) og node-links: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak for et fantastisk værktøj til det danske MeshCore-netværk.</footer>
+<footer>Kortet viser de ruter, DK_8700_KOK_HeltecV3 selv hørte (rute 1 er den, svaret bygger på) – meshview.dk viser, hvad alle observere i netværket hørte.<br>DK_8700_KOK, Horsens · Stier gemmes i 1 døgn og slettes derefter. Positioner fra offentlige adverts. For DM'er vises V3'ens gemte rute til afsenderen (vendt om), når DM'en kom direkte-routet. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofiler antager 5 m antennehøjde over terræn (højdedata: Open-Meteo / Copernicus).<br>Node-data (hash-størrelse, scopes) og node-links: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak for et fantastisk værktøj til det danske MeshCore-netværk.</footer>
 
 <script>
 const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
@@ -171,7 +171,7 @@ function punkterFor(rute) {
   return [
     { type: "afs", ...DATA.afs, gammel: afsForældet() },
     ...rute.hop.map((h, i) => ({ type: "hop", nr: i + 1, ...h })),
-    { type: "mod", ...DATA.mod, n: "KOKbot 🧑‍🍳", radio: DATA.mod?.n },
+    { type: "mod", ...DATA.mod, n: DATA.mod?.n || "DK_8700_KOK_HeltecV3" },
   ];
 }
 
@@ -193,7 +193,7 @@ function ben(punkter) {
 
 function vis(d) {
   DATA = d;
-  document.title = `KOKbot – ${d.afs?.n || "sti"}`;
+  document.title = `DK_8700_KOK – ${d.afs?.n || "sti"}`;
   document.getElementById("titel").innerHTML = nodeLink(d.afs?.n || "Ukendt afsender", d.afs?.k);
   const tid = d.t ? new Date(d.t * 1000).toLocaleString("da-DK", { dateStyle: "medium", timeStyle: "short" }) : "";
   document.getElementById("meta").textContent = `${tid}${d.kanal ? " · " + d.kanal : ""}`;
@@ -276,16 +276,16 @@ function visListe(punkter) {
     const snr = Math.round(r.snr);
     const snrOrd = snr > 5 ? "godt" : snr >= 0 ? "ok" : snr >= -5 ? "svagt" : "på grænsen";
     chips.push({ t: `SNR ${snr} dB · ${snrOrd}`,
-      title: "Signal/støj-forhold på sidste hop til KOKbot. Over 5 dB er godt; LoRa kan modtage ned til ca. −10 dB." });
+      title: "Signal/støj-forhold på sidste hop til DK_8700_KOK_HeltecV3. Over 5 dB er godt; LoRa kan modtage ned til ca. −10 dB." });
   }
   if (r.rssi != null) {
     const rssiOrd = r.rssi > -80 ? "kraftigt" : r.rssi > -100 ? "godt" : r.rssi > -115 ? "svagt" : "på grænsen";
     chips.push({ t: `RSSI ${r.rssi} dBm · ${rssiOrd}`,
-      title: "Modtaget signalstyrke på sidste hop til KOKbot. Jo tættere på 0, jo kraftigere; grænsen er ca. −125 dBm." });
+      title: "Modtaget signalstyrke på sidste hop til DK_8700_KOK_HeltecV3. Jo tættere på 0, jo kraftigere; grænsen er ca. −125 dBm." });
   }
   if (ialt) chips.push(`${Math.round(ialt)} km i alt`);
   if (længst.km) chips.push(`længste spring ${Math.round(længst.km)} km`);
-  if (DATA.ruter.length > 1) chips.push(`hørt af KOKbot ad ${DATA.ruter.length} ruter`);
+  if (DATA.ruter.length > 1) chips.push(`hørt ad ${DATA.ruter.length} ruter`);
   if (DATA.rute_kilde === "kontakt") chips.push("gemt DM-rute");
   if (DATA.rute_kilde === "seneste") chips.push("sandsynlig rute (seneste flood-DM)");
   let mvChip = "";
@@ -316,7 +316,7 @@ function visListe(punkter) {
         ? `<div class="mv">Ind hertil: ${sigTekst(p.lnk.snr, p.lnk.rssi)} <span class="under">(målt af repeateren via meshview)</span></div>`
         : (r.hop.some(h => h.lnk) ? `<div class="mv">Ind hertil: ikke målt</div>` : "");
     } else if (p.type === "mod" && r.snr != null) {
-      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af KOKbot)</span></div>`;
+      signal = `<div class="mv">Ind hertil: ${sigTekst(r.snr, r.rssi)} <span class="under">(målt af DK_8700_KOK_HeltecV3)</span></div>`;
     }
     if (p.hørt && p.type !== "mod") {
       const hvem = p.type === "afs" ? "Hørt direkte af" : "Hørt lige efter af";
