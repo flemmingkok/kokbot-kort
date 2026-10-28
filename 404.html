@@ -86,7 +86,8 @@
 Positioner fra offentlige adverts. Hop-præfikser kan pege på en forkert repeater – usikre hop er markeret. Terrænprofil antager 5 m antennehøjde (højdedata: Open-Meteo/Copernicus). Node-data: <a class="node" href="https://meshview.dk/" target="_blank" rel="noopener">meshview.dk</a> – tak!</footer>
 
 <script>
-const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json`;
+// Unik adresse hver gang, så GitHubs cache aldrig kan give et gammelt "findes ikke"
+const DATA_URL = id => `https://raw.githubusercontent.com/flemmingkok/kokbot-kort/data/p/${id}.json?v=${Date.now()}`;
 const RUTEFARVER = ["#d97706", "#7c3aed", "#0891b2", "#db2777", "#65a30d"];
 const ANTENNE_M = 5;          // antaget antennehøjde over terræn
 const FREKVENS_GHZ = 0.869;
@@ -150,13 +151,13 @@ async function start() {
   const id = hentId();
   if (!id) return fejl("Linket mangler et sti-ID.");
   let d;
-  for (let forsøg = 0; forsøg < 6; forsøg++) {        // nye stier kan være op til ~1 min om at dukke op
+  for (let forsøg = 0; forsøg < 24; forsøg++) {       // nye stier kan være op til ~2 min om at dukke op
     try {
       const svar = await fetch(DATA_URL(id), { cache: "no-store" });
       if (svar.ok) { d = await svar.json(); break; }
     } catch (e) {}
     document.getElementById("titel").textContent = "Venter på stien… (nye stier kan tage op til et minut)";
-    await new Promise(r => setTimeout(r, 10000));
+    await new Promise(r => setTimeout(r, 5000));
   }
   if (!d) return fejl("Linket er udløbet eller findes ikke.<br>Stier gemmes kun i 1 døgn – send <b>/sti</b> igen for at få et nyt kort.");
   if (!d.ruter) d.ruter = [{ hop: d.hop || [], snr: d.snr, rssi: d.rssi }];   // v1-data
